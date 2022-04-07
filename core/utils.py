@@ -2,7 +2,7 @@
 # @Author       : Chr_
 # @Date         : 2022-04-06 21:13:45
 # @LastEditors  : Chr_
-# @LastEditTime : 2022-04-07 11:03:07
+# @LastEditTime : 2022-04-07 22:10:11
 # @Description  : 工具类
 '''
 
@@ -10,31 +10,27 @@ import random
 import json
 from json import JSONDecodeError
 from typing import Tuple
+from uuid import uuid1
 
-from .exceptions import PayloadError
+from .exceptions import ForumBaseException, PayloadInvlidError, MissingParamsError
 
 
 ASCIIS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
 
 
-def random_str(length: int = 6):
-    strs = random.sample(ASCIIS, length)
-    return ''.join(strs)
+def random_str():
+    return uuid1().hex
 
 
 def log(msg: str, addr: Tuple[str, int] = None, error: bool = False):
-    if not error:
-        if addr:
-            print(f'[\033[0;32;40m{addr[0]}:{addr[1]}\033[0m] {msg}')
-
-        else:
-            print(f'[\033[0;34;40mServer\033[0m] {msg}')
+    if addr:
+        title = f'{addr[0]}:{addr[1]}'
+        color = 32 if not error else 31
     else:
-        if addr:
-            print(f'[\033[0;31;40m{addr[0]}:{addr[1]}\033[0m] {msg}')
+        title = 'Server'
+        color = 34 if not error else 35
 
-        else:
-            print(f'[\033[0;35;40mServer\033[0m] {msg}')
+    print(f'[\033[{color}m{title}\033[0m] {msg}')
 
 
 def json_serializer(obj: object):
@@ -49,13 +45,18 @@ def json_deserializer(data: bytes):
         raw = data.decode('utf-8')
         jd = json.loads(raw)
         if not isinstance(jd, dict):
-            raise PayloadError(422, 'Payload invalid')
+            raise PayloadInvlidError(422, 'Payload invalid')
+        elif 'echo' not in jd:
+            raise PayloadInvlidError(400, 'Missing echo in the payload')
         return jd
     except UnicodeDecodeError:
-        raise PayloadError(422, 'Payload can not decode to UTF-8')
+        raise PayloadInvlidError(422, 'Payload can not decode to UTF-8')
 
     except JSONDecodeError:
-        raise PayloadError(422, 'Payload can not decode to JSON')
+        raise PayloadInvlidError(422, 'Payload can not decode to JSON')
 
-    except Exception:
-        raise PayloadError(422, 'Payload parse error')
+    except Exception as e:
+        if isinstance(e, ForumBaseException):
+            raise e
+        else:
+            raise PayloadInvlidError(422, 'Payload parse error')

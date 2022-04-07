@@ -2,7 +2,7 @@
 # @Author       : Chr_
 # @Date         : 2022-04-07 00:06:04
 # @LastEditors  : Chr_
-# @LastEditTime : 2022-04-07 13:36:13
+# @LastEditTime : 2022-04-07 21:10:35
 # @Description  : 
 '''
 
@@ -57,25 +57,29 @@ class Authenticator:
             print(e)
 
     def __generate_token(self, user: str) -> str:
-        token = random_str(20)
+        token = random_str()
         self.user2token_dict[user] = token
         self.token2user_dict[token] = user
         return token
 
     def login(self, user: str, passwd: str) -> str:
         '''user login, return token if success'''
-        if not user or not passwd:
+        if not user:
             raise ParamsInValidError(
-                400, 'Username or password can not be empty')
+                400, 'Username can not be empty')
 
         elif user not in self.user_dict:
             raise UserNotExistsError(403, f'User {user} not exists')
 
-        elif self.user_dict[user] != passwd:
-            raise PasswordError(403, f'Password error for user {user}')
-
         elif user in self.user2token_dict:
             raise UserAlreadyLoginError(403, f'User {user} already login')
+
+        elif self.user_dict[user] != passwd:
+            if not passwd:
+                raise PasswordError(
+                    200, f'User {user} exists, please enter the password')
+            else:
+                raise PasswordError(403, f'Password error for user {user}')
 
         else:
             token = self.__generate_token(user)

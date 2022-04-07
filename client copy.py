@@ -1,13 +1,14 @@
 
 import os
-import select
-import socket
 import sys
+import socket
+import select
+
 from socket import socket as Socket
 
+from core.udp_handler import UDPHandler
 from core.authenticator import Authenticator
 from core.forum_handler import ForumHandler
-from core.udp_handler import UDPHandler
 from core.utils import log
 
 LISTEN_ON = '0.0.0.0'
@@ -46,8 +47,6 @@ def main(host, port):
     # Init UDPHandler
     udp_handler = UDPHandler(auth, forum, udp_socket)
 
-    log('Wating for clients ...', None, False)
-
     # Event loop
     try:
         inputs = [tcp_socket, udp_socket]
@@ -68,7 +67,7 @@ def main(host, port):
                     # UDP message
                     data, addr = event.recvfrom(8192)
                     udp_handler.handler_message(data, addr)
-
+                
                 else:
                     # TCP message
                     data = event.recv(8192)

@@ -11,7 +11,7 @@ from typing import Dict
 
 from core.exceptions import PostNotExitsError, PostTitleDuplicateError
 
-from .models import ForumModelEncoder, ForumPost, ForumMessage
+from .models import ForumMessage, ForumModelEncoder, ForumPost
 
 
 class ForumHandler:

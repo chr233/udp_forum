@@ -2,24 +2,22 @@
 # @Author       : Chr_
 # @Date         : 2022-04-06 13:22:07
 # @LastEditors  : Chr_
-# @LastEditTime : 2022-04-07 15:19:09
+# @LastEditTime : 2022-04-07 22:10:36
 # @Description  :
 '''
 
+from socket import socket as Socket
 from typing import Tuple
 
-from socket import socket as Socket
-
-from .forum_handler import ForumHandler
 from .authenticator import Authenticator
-from .exceptions import PayloadError, ForumBaseException, AuthenticationError
+from .exceptions import AuthenticationError, ForumBaseException, MissingParamsError, PayloadInvlidError, UnrecognizedCmdError
+from .forum_handler import ForumHandler
 from .payload_helper import PayloadHelper
 from .utils import json_deserializer, log
 
-
-CMDs = ['CRT', 'LST', 'MSG', 'DLT', 'RDT',
-        'UPD', 'DWN', 'RMV', 'XIT',
-        'REG', 'LOG', 'HEART']
+CMDs = {'CRT', 'LST', 'MSG', 'DLT', 'RDT',
+        'UPD', 'DWN', 'RMV', 'XIT', 'HLP',
+        'REG', 'LOG', 'HEART'}
 
 
 class UDPHandler():
@@ -35,14 +33,16 @@ class UDPHandler():
         try:
             payload = json_deserializer(raw)
 
-            echo = payload.get('echo', '')
+            log(f'IN  <-- {payload}', None, False)
+
+            echo = payload['echo']
 
             if 'cmd' in payload:
 
                 cmd = payload['cmd']
 
                 if cmd not in CMDs:
-                    raise PayloadError(400, 'Unrecognized cmd')
+                    raise UnrecognizedCmdError(400, 'Unrecognized cmd')
 
                 if 'token' in payload:
                     # normal command
@@ -51,23 +51,43 @@ class UDPHandler():
 
                     msg = 'OK'
 
-                    if cmd == 'CRT':  # Create Thread
-
+                    if cmd == 'HEART':  # Heartbeat
                         ...
+                        response = PayloadHelper.response_command(
+                            200, None, msg, echo=echo)
+
+                    elif cmd == 'CRT':  # Create Thread
+                        ...
+                        response = PayloadHelper.response_command(
+                            200, None, msg, echo=echo)
                     elif cmd == 'LST':  # List Threads
                         ...
+                        response = PayloadHelper.response_command(
+                            200, None, msg, echo=echo)
                     elif cmd == 'MSG':  # Post Message
                         ...
+                        response = PayloadHelper.response_command(
+                            200, None, msg, echo=echo)
                     elif cmd == 'DLT':  # Delete Message
                         ...
+                        response = PayloadHelper.response_command(
+                            200, None, msg, echo=echo)
                     elif cmd == 'RDT':  # Read Thread
                         ...
+                        response = PayloadHelper.response_command(
+                            200, None, msg, echo=echo)
                     elif cmd == 'UPD':  # Upload file
                         ...
+                        response = PayloadHelper.response_command(
+                            200, None, msg, echo=echo)
                     elif cmd == 'DWN':  # Download file
                         ...
+                        response = PayloadHelper.response_command(
+                            200, None, msg, echo=echo)
                     elif cmd == 'RMV':  # Remove Thread
                         ...
+                        response = PayloadHelper.response_command(
+                            200, None, msg, echo=echo)
                     elif cmd == 'XIT':  # Exit
                         self.auth.logout(payload['token'])
                         log(f'{user} successful logout!', addr, False)
@@ -107,7 +127,7 @@ class UDPHandler():
                     )
 
                 else:
-                    raise PayloadError(400, 'Bad Request')
+                    raise MissingParamsError(400, 'Bad Request')
 
             elif 'meta' in payload:
                 # meta
@@ -119,18 +139,21 @@ class UDPHandler():
                     response = None
 
             else:
-                raise PayloadError(400, 'Bad Request')
+                raise MissingParamsError(400, 'Bad Request')
 
         except KeyError as e:
-            err = PayloadError(400, 'Bad Request')
+            err = MissingParamsError(400, f'Missing {e} in the payload')
             response = PayloadHelper.response_error(err, echo)
 
         except AuthenticationError as e:
             log(f'AuthenticationError: {e.msg}', addr, True)
             response = PayloadHelper.response_error(e, echo)
 
+        except PayloadInvlidError as e:
+            response = PayloadHelper.response_error(e, "FAULT")
+
         except ForumBaseException as e:
-            response = PayloadHelper.response_error(e, "")
+            response = PayloadHelper.response_error(e, "FAULT")
 
         # except Exception as e:
         #     err = PayloadError(500, 'Internal Server Error')
@@ -139,6 +162,7 @@ class UDPHandler():
 
         finally:
             if response:
+                log(f'OUT --> {response.decode("utf-8")}', None, False)
                 self.sock.sendto(response, addr)
 
         # except Exception as e:

@@ -1,15 +1,8 @@
-'''
-# @Author       : Chr_
-# @Date         : 2022-04-06 16:11:43
-# @LastEditors  : Chr_
-# @LastEditTime : 2022-04-07 14:01:15
-# @Description  : 组装payload
-'''
 
 from typing import List
 
-from .utils import json_serializer
 from .exceptions import ForumBaseException
+from .utils import json_serializer
 
 
 class PayloadHelper:
@@ -32,7 +25,7 @@ class PayloadHelper:
     @staticmethod
     def request_command(cmd: str, token: str, args: List[str] = None, echo: str = ''):
         '''Command request'''
-        jd = {'cmd': cmd, 'args': args or [],
+        jd = {'cmd': cmd, 'args': args or None,
               'token': token, 'echo': echo}
         data = json_serializer(jd)
         return data
@@ -47,7 +40,8 @@ class PayloadHelper:
     @staticmethod
     def response_error(err: ForumBaseException, echo: str = ''):
         '''Error response'''
-        jd = {'code': err.code, 'msg': err.msg, 'echo': echo}
+        name = err.__doc__ or str(err.__class__)
+        jd = {'code': err.code, 'msg': err.msg, 'error': name, 'echo': echo}
         data = json_serializer(jd)
         return data
 
