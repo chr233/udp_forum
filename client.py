@@ -51,7 +51,7 @@ def thread_network_send(echo, payload):
         SUDP.sendto(payload, ServerAddr)
         time.sleep(5)
 
-        if EchoDict.get(echo, None):
+        if EchoDict.get(echo, None) or echo not in EchoDict:
             break
 
 
@@ -69,6 +69,8 @@ def thread_network_recv():
 
 
 def udp_handler(raw: bytes):
+    '''Handle UDP message'''
+    global TOKEN
     try:
         payload = json_deserializer(raw)
         echo = payload['echo']
@@ -76,7 +78,8 @@ def udp_handler(raw: bytes):
         if 'code' in payload and 'msg' in payload:
             reply = True
             if 'error' in payload:  # error message
-                ...
+                if payload['error'] == 'AuthenticationError':
+                    TOKEN = ''
             elif 'token' in payload:  # login message
                 ...
             elif 'data' in payload:  # normal message
@@ -108,6 +111,7 @@ def udp_handler(raw: bytes):
 
 
 def waiting_screen(key: str, timeout: int = 10):
+    '''Waiting for response'''
     ascii = ['|', '/', '-', '\\']
 
     i = 0
@@ -123,7 +127,8 @@ def waiting_screen(key: str, timeout: int = 10):
             i += 1
         else:
             i = 0
-        print('\r %s Processing %s' % (char, char), end='')
+
+        print(f'\rWating {char}', end='')
 
         time.sleep(0.1)
 
@@ -132,33 +137,39 @@ def waiting_screen(key: str, timeout: int = 10):
 
 
 def log(msg: str,  error: bool = False):
+    '''Logging'''
     title = 'Client'
     color = 32 if not error else 31
     print(f'[\033[{color}m{title}\033[0m] {msg}')
 
 
 def ipt(user: str):
+    '''Input text'''
     while True:
-        txt = input(f'\033[32m$ {user.center(12)}\033[0m > ')
+        txt = input(f'\033[32m$ {user.center(6)}\033[0m > ')
         if txt:
             return txt
 
 
-def main():
-    global TOKEN
+def call_with_retries(payload: bytes, echo: str, timeout: int = 10):
+    '''Call server with retries'''
+    EchoDict[echo] = None
+    Thread(target=thread_network_send, args=(
+        echo, payload), daemon=True).start()
+    waiting_screen(echo, timeout)
+    result = EchoDict.pop(echo)
+    return result
 
-    # Test server connection
+
+def test_server_connection():
+    '''Test server connection'''
     while True:
         try:
             log(f'Connecting to {ServerAddr[0]}:{ServerAddr[1]} ...', False)
 
             echo = random_str()
             payload = PayloadHelper.request_meta(echo, True)
-            EchoDict[echo] = None
-
-            Thread(target=thread_network_send, args=(echo, payload,)).start()
-            waiting_screen(echo, 10)
-            EchoDict.pop(echo)
+            call_with_retries(payload, echo)
 
             log('Connected!', False)
             break
@@ -166,19 +177,95 @@ def main():
         except TimeoutError:
             pass
 
-    while True:
 
-        print()
+def interactive_login() -> str:
+    '''Interactive login'''
+    global TOKEN
+
+    log('Login', False)
+
+    while True:
         username = ipt('Enter your username:')
 
         echo = random_str()
         payload = PayloadHelper.request_auth(username, "", True, echo)
-        EchoDict[echo] = None
-        
-        Thread(target=thread_network_send, args=(echo, payload,)).start()
-        waiting_screen(echo, 10)
-        data = EchoDict.pop(echo)
-        print(data)
+        data = call_with_retries(payload, echo)
+
+        code = data['code']
+        succ = code == 200
+        log(data['msg'], not succ)
+
+        if data.get('error', None) == 'UserNotExistsError':
+            print()
+            log('Do you want to register?', False)
+            choice = ipt('Y: regiser, [N]: login')
+
+            if choice.upper() == 'Y':
+                return interactive_register()
+
+        if not succ:
+            continue
+
+        passwd = ipt('Enter your password:')
+
+        echo = random_str()
+        payload = PayloadHelper.request_auth(username, passwd, True, echo)
+        data = call_with_retries(payload, echo)
+
+        code = data['code']
+        succ = code == 200
+        log(data['msg'], not succ)
+
+        if succ and 'token' in data:
+            TOKEN = data['token']
+            return username
+
+
+def interactive_register() -> str:
+    '''Interactive register'''
+    global TOKEN
+
+    log('Register', False)
+
+    while True:
+        username = ipt('Enter your username:')
+
+        echo = random_str()
+        payload = PayloadHelper.request_auth(username, "", False, echo)
+        data = call_with_retries(payload, echo)
+
+        code = data['code']
+        succ = code == 200
+        log(data['msg'], not succ)
+
+        if not succ:
+            continue
+
+        passwd = ipt('Enter your password:')
+
+        echo = random_str()
+        payload = PayloadHelper.request_auth(username, passwd, False, echo)
+        data = call_with_retries(payload, echo)
+
+        code = data['code']
+        succ = code == 200
+        log(data['msg'], not succ)
+
+        if succ and 'token' in data:
+            TOKEN = data['token']
+            break
+
+    return username
+
+
+def main():
+    test_server_connection()
+    user = interactive_login()
+
+    print()
+
+    while TOKEN:
+        ipt(user=user)
 
     # RH = RequestHelper(address)
 
@@ -233,8 +320,8 @@ if __name__ == '__main__':
             input()
             exit(1)
 
-        Thread(target=thread_heartbeat).start()
-        Thread(target=thread_network_recv).start()
+        Thread(target=thread_heartbeat, daemon=True).start()
+        Thread(target=thread_network_recv, daemon=True).start()
 
         ServerAddr = (host, port)
 
@@ -245,5 +332,6 @@ if __name__ == '__main__':
                 log('Reset client ...', True)
 
     except KeyboardInterrupt:
+        print()
         log('Client shutdown ...', False)
         exit()

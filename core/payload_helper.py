@@ -9,7 +9,7 @@ class PayloadHelper:
     @staticmethod
     def request_auth(user: str, passwd: str, login: bool = True, echo: str = ''):
         '''Authentication request'''
-        jd = {'cmd': 'LOGIN' if login else 'REGISTER',
+        jd = {'cmd': 'LOG' if login else 'REG',
               'user': user, 'passwd': passwd, 'echo': echo}
         data = json_serializer(jd)
         return data

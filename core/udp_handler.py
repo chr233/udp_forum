@@ -1,10 +1,5 @@
-'''
-# @Author       : Chr_
-# @Date         : 2022-04-06 13:22:07
-# @LastEditors  : Chr_
-# @LastEditTime : 2022-04-07 22:10:36
-# @Description  :
-'''
+
+from threading import Thread
 
 from socket import socket as Socket
 from typing import Tuple
@@ -28,6 +23,8 @@ class UDPHandler():
         self.sock = sock
         self.auth = auth
         self.forum = forum
+
+        Thread(target=auth.check_ttl, daemon=True).start()
 
     def handler_message(self, raw: bytes, addr: Tuple[str, int]):
         try:
@@ -90,7 +87,7 @@ class UDPHandler():
                             200, None, msg, echo=echo)
                     elif cmd == 'XIT':  # Exit
                         self.auth.logout(payload['token'])
-                        log(f'{user} successful logout!', addr, False)
+                        log(f'User {user} successful logout!', addr, False)
 
                         count = self.auth.count_online()
                         log(f'Online users: {count}', None, False)
@@ -112,12 +109,12 @@ class UDPHandler():
                     if cmd == 'REG':
                         token = self.auth.register(user, passwd)
                         msg = f'Welcome new user {user} !'
-                        log(f'{user} successful register!', addr, False)
+                        log(f'User {user} successful register!', addr, False)
 
                     elif cmd == 'LOG':
                         token = self.auth.login(user, passwd)
                         msg = f'Welcome user {user} !'
-                        log(f'{user} successful login!', addr, False)
+                        log(f'User {user} successful login!', addr, False)
 
                     count = self.auth.count_online()
                     log(f'Online users: {count}', None, False)
@@ -141,6 +138,9 @@ class UDPHandler():
             else:
                 raise MissingParamsError(400, 'Bad Request')
 
+        except PayloadInvlidError as e:
+            response = PayloadHelper.response_error(e, "FAULT")
+
         except KeyError as e:
             err = MissingParamsError(400, f'Missing {e} in the payload')
             response = PayloadHelper.response_error(err, echo)
@@ -149,11 +149,8 @@ class UDPHandler():
             log(f'AuthenticationError: {e.msg}', addr, True)
             response = PayloadHelper.response_error(e, echo)
 
-        except PayloadInvlidError as e:
-            response = PayloadHelper.response_error(e, "FAULT")
-
         except ForumBaseException as e:
-            response = PayloadHelper.response_error(e, "FAULT")
+            response = PayloadHelper.response_error(e, echo)
 
         # except Exception as e:
         #     err = PayloadError(500, 'Internal Server Error')

@@ -1,10 +1,3 @@
-'''
-# @Author       : Chr_
-# @Date         : 2022-04-07 11:08:39
-# @LastEditors  : Chr_
-# @LastEditTime : 2022-04-07 15:11:59
-# @Description  : 
-'''
 
 from json import JSONEncoder
 from typing import Dict

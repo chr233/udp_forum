@@ -1,12 +1,4 @@
-'''
-# @Author       : Chr_
-# @Date         : 2022-04-06 21:13:45
-# @LastEditors  : Chr_
-# @LastEditTime : 2022-04-07 22:10:11
-# @Description  : 工具类
-'''
-
-import random
+from time import time
 import json
 from json import JSONDecodeError
 from typing import Tuple
@@ -20,6 +12,10 @@ ASCIIS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
 
 def random_str():
     return uuid1().hex
+
+
+def get_time():
+    return int(time())
 
 
 def log(msg: str, addr: Tuple[str, int] = None, error: bool = False):

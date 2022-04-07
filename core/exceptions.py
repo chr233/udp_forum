@@ -1,11 +1,3 @@
-'''
-# @Author       : Chr_
-# @Date         : 2022-04-06 16:10:34
-# @LastEditors  : Chr_
-# @LastEditTime : 2022-04-07 22:07:43
-# @Description  : 
-'''
-
 
 class ForumBaseException(Exception):
     '''ForumBaseException'''

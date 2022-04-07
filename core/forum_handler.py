@@ -1,10 +1,3 @@
-'''
-# @Author       : Chr_
-# @Date         : 2022-04-07 11:04:29
-# @LastEditors  : Chr_
-# @LastEditTime : 2022-04-07 15:16:15
-# @Description  :
-'''
 
 import json
 from typing import Dict
@@ -143,9 +136,8 @@ class ForumHandler:
     def delete_message_no(self, pid, mid, user):
         post = self.__fetch_post(None, pid)
 
-    def read_thread(self,title):
+    def read_thread(self, title):
         post = self.__fetch_post(title, None)
-        
-    def read_thread_no(self,pid):
+
+    def read_thread_no(self, pid):
         post = self.__fetch_post(None, pid)
-        
