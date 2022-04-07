@@ -15,12 +15,13 @@ LISTEN_ON = '0.0.0.0'
 
 def main(host, port):
     # Init user authenticator
-    auth_file = os.path.abspath("./credentials.txt")
+    auth_file = os.path.abspath('./credentials.txt')
     auth = Authenticator(auth_file)
 
     # Init forum handler
-    db_path = os.path.abspath("./db.json")
-    forum = ForumHandler(db_path)
+    db_path = os.path.abspath('./db.json')
+    data_path = os.path.abspath('./data/')
+    forum = ForumHandler(db_path, data_path)
 
     # Init UDP server
     udp_socket = Socket(socket.AF_INET, socket.SOCK_DGRAM)

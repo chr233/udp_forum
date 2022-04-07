@@ -1,4 +1,5 @@
 
+from os import path
 import time
 from typing import Dict
 
@@ -33,6 +34,9 @@ class Authenticator:
     def __load_users(self):
         try:
             self.user_dict = {}
+
+            if not path.exists(self.file_path):
+                open(self.file_path, 'a', encoding='utf-8').close()
 
             with open(self.file_path, 'r', encoding='utf-8') as f:
                 for line in f.readlines():

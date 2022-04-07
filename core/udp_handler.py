@@ -10,9 +10,9 @@ from .forum_handler import ForumHandler
 from .payload_helper import PayloadHelper
 from .utils import json_deserializer, log
 
-CMDs = {'CRT', 'LST', 'MSG', 'DLT', 'RDT',
-        'UPD', 'DWN', 'RMV', 'XIT', 'HLP',
-        'REG', 'LOG', 'HEART'}
+CMDs = {'CRT', 'LST', 'MSG', 'EDT', 'DLT',
+        'RDT', 'UPD', 'DWN', 'RMV', 'XIT',
+        'HLP', 'REG', 'LOG', 'HEART'}
 
 
 class UDPHandler():
@@ -43,15 +43,14 @@ class UDPHandler():
 
                 if 'token' in payload:
                     # normal command
-
-                    user = self.auth.auth(payload['token'])
+                    token = payload['token']
+                    user = self.auth.auth(token)
 
                     msg = 'OK'
 
                     if cmd == 'HEART':  # Heartbeat
-                        ...
-                        response = PayloadHelper.response_command(
-                            200, None, msg, echo=echo)
+                        self.auth.renewal_token(token)
+                        response = None
 
                     elif cmd == 'CRT':  # Create Thread
                         ...
@@ -85,6 +84,13 @@ class UDPHandler():
                         ...
                         response = PayloadHelper.response_command(
                             200, None, msg, echo=echo)
+
+                    elif cmd == 'HLP':  # Help
+                        data = f'Avilable commands: {", ".join(CMDs)}'
+
+                        response = PayloadHelper.response_command(
+                            200, data, "OK", echo=echo)
+
                     elif cmd == 'XIT':  # Exit
                         self.auth.logout(payload['token'])
                         log(f'User {user} successful logout!', addr, False)

@@ -18,8 +18,9 @@ from core.exceptions import ForumBaseException, PayloadBaseError
 from core.payload_helper import PayloadHelper
 from core.utils import json_deserializer, random_str
 
-CMDs = {'CRT', 'LST', 'MSG', 'DLT', 'RDT',
-        'UPD', 'DWN', 'RMV', 'XIT', 'HLP', }
+CMDs = {'CRT', 'LST', 'MSG', 'EDT', 'DLT',
+        'RDT', 'UPD', 'DWN', 'RMV', 'XIT',
+        'HLP', 'REG', 'LOG', 'HEART'}
 
 SUDP = Socket(socket.AF_INET, socket.SOCK_DGRAM)
 STCP = Socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -62,10 +63,13 @@ def thread_network_recv():
     while True:
         rlist, _, _ = select.select(inputs, [], [], 1)
         for event in rlist:
-            if event == SUDP:
-                # UDP message
-                data, _ = event.recvfrom(8192)
-                udp_handler(data)
+            try:
+                if event == SUDP:
+                    # UDP message
+                    data, _ = event.recvfrom(8192)
+                    udp_handler(data)
+            except ConnectionResetError as e:
+                log(e, True)
 
 
 def udp_handler(raw: bytes):
@@ -258,38 +262,43 @@ def interactive_register() -> str:
     return username
 
 
+def interactive_commdline(user: str) -> str:
+    '''Interactive register'''
+
+    while TOKEN:
+        argv = ipt(user)
+
+        args = argv.split(' ')
+
+        if len(args) == 0:
+            continue
+
+        cmd = args[0]
+
+        echo = random_str()
+        payload = PayloadHelper.request_command(cmd, TOKEN, args, echo)
+        data = call_with_retries(payload, echo)
+
+        code = data['code']
+        succ = code == 200
+        if succ:
+            log(data['data'], False)
+        else:
+            log(data['msg'], True)
+
+
 def main():
     test_server_connection()
     user = interactive_login()
 
     print()
 
-    while TOKEN:
-        ipt(user=user)
+    log('Avilable commands:', False)
+    log(", ".join(CMDs), False)
 
-    # RH = RequestHelper(address)
+    print()
 
-    try:
-        # RH.meta()
-        ...
-    except KeyboardInterrupt:
-        ...
-
-    # 登陆鉴权
-    try:
-        ...
-
-    except KeyboardInterrupt:
-        pass
-
-    # 业务流程
-    try:
-
-        ...
-    except KeyboardInterrupt:
-        pass
-
-    return
+    interactive_commdline(user)
 
 
 if __name__ == '__main__':

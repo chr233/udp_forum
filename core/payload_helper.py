@@ -31,7 +31,7 @@ class PayloadHelper:
         return data
 
     @staticmethod
-    def response_command(code: int, data: object = None, msg: str = 'OK', echo: str = ''):
+    def response_command(code: int, data: str = None, msg: str = 'OK', echo: str = ''):
         '''Command response'''
         jd = {'code': code, 'msg': msg, 'data': data, 'echo': echo}
         data = json_serializer(jd)
