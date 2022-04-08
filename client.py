@@ -1,34 +1,28 @@
 
-import asyncio
-import json
-import random
 import select
 import socket
 import sys
 import time
+from os import path
+from base64 import b64decode, b64encode
 from socket import socket as Socket
 from threading import Thread
-from typing import Dict, Tuple
-from uuid import uuid1
-
-from aioredis import AuthenticationError
-from core.exceptions import ForumBaseException, PayloadBaseError
-
+from typing import Dict
+from core.exceptions import ForumBaseException
 
 from core.payload_helper import PayloadHelper
-from core.utils import json_deserializer, random_str
+from core.utils import json_deserializer, random_str, package_file
 
-CMDs = {'CRT', 'LST', 'MSG', 'EDT', 'DLT',
-        'RDT', 'UPD', 'DWN', 'RMV', 'XIT',
-        'HLP', 'REG', 'LOG', 'HEART'}
+CMDS = ('CRT', 'LST', 'MSG', 'EDT', 'DLT',
+        'RDT', 'UPD', 'DWN', 'RMV', 'XIT', 'HLP')
 
 SUDP = Socket(socket.AF_INET, socket.SOCK_DGRAM)
-STCP = Socket(socket.AF_INET, socket.SOCK_STREAM)
 
-TOKEN = ''
 
+RECV_BYTES = 8192
 RETRIES = 3
 
+Token = ''
 ServerAddr = ''
 
 EchoDict: Dict[str, bytes] = {}
@@ -38,22 +32,42 @@ def thread_heartbeat():
     '''Thread sending heartbeat to server'''
 
     while True:
-        if TOKEN:
+        if Token:
             echo = random_str()
-            payload = PayloadHelper.request_command('HEART', TOKEN, None, echo)
+            payload = PayloadHelper.request_command('HEART', Token, None, echo)
             SUDP.sendto(payload, ServerAddr)
 
         time.sleep(10)
 
 
-def thread_network_send(echo, payload):
-    '''Thread sending data'''
+def thread_network_send_udp(echo, payload):
+    '''Thread sending data via UDP'''
     for _ in range(RETRIES + 1):
         SUDP.sendto(payload, ServerAddr)
         time.sleep(5)
 
         if EchoDict.get(echo, None) or echo not in EchoDict:
             break
+
+
+def thread_network_send_tcp(echo, payload):
+    '''Thread sending data via TCP'''
+    STCP = Socket(socket.AF_INET, socket.SOCK_STREAM)
+    STCP.setblocking(True)
+    
+    for _ in range(RETRIES + 1):
+        try:
+            STCP.connect(ServerAddr)
+            STCP.send(payload)
+            raw = STCP.recv(RECV_BYTES)
+            response_handler(raw)
+            STCP.close()
+            time.sleep(2)
+
+            if EchoDict.get(echo, None) or echo not in EchoDict:
+                break
+        except OSError as e:
+            log(f'TCP send error: {e}', True)
 
 
 def thread_network_recv():
@@ -66,15 +80,15 @@ def thread_network_recv():
             try:
                 if event == SUDP:
                     # UDP message
-                    data, _ = event.recvfrom(8192)
-                    udp_handler(data)
+                    data, _ = event.recvfrom(RECV_BYTES)
+                    response_handler(data)
             except ConnectionResetError as e:
                 log(e, True)
 
 
-def udp_handler(raw: bytes):
+def response_handler(raw: bytes):
     '''Handle UDP message'''
-    global TOKEN
+    global Token
     try:
         payload = json_deserializer(raw)
         echo = payload['echo']
@@ -83,11 +97,7 @@ def udp_handler(raw: bytes):
             reply = True
             if 'error' in payload:  # error message
                 if payload['error'] == 'AuthenticationError':
-                    TOKEN = ''
-            elif 'token' in payload:  # login message
-                ...
-            elif 'data' in payload:  # normal message
-                ...
+                    Token = ''
 
         elif 'meta' in payload:  # meta
             reply = payload.get('reply', False)
@@ -107,11 +117,10 @@ def udp_handler(raw: bytes):
         log(f'Bad payload: {payload}', True)
 
     except ForumBaseException as e:
-        log(f'{e.msg}', True)
+        log(e.msg, True)
 
-    # except Exception as e:
-    #     err = PayloadError(500, 'Internal Server Error')
-    #     response = PayloadHelper.response_error(err, echo)
+    except Exception as e:
+        log(f'Unknown error: {e}', True)
 
 
 def waiting_screen(key: str, timeout: int = 10):
@@ -137,14 +146,25 @@ def waiting_screen(key: str, timeout: int = 10):
         time.sleep(0.1)
 
     print('\r \033[31mProcess Timeout!\033[0m\n')
-    raise TimeoutError("Timeout!")
+    raise TimeoutError('Timeout!')
 
 
 def log(msg: str,  error: bool = False):
     '''Logging'''
     title = 'Client'
     color = 32 if not error else 31
-    print(f'[\033[{color}m{title}\033[0m] {msg}')
+    print(f'\r[\033[{color}m{title}\033[0m] {msg}')
+
+
+def logcmd(msg: str, error: bool = False):
+    '''Logging cmd result'''
+    color = 34 if not error else 31
+    title = 'Result' if not error else 'Error'
+    sep = '<'
+    for line in msg.split('\n'):
+        print(f'\033[{color}m$ {title.center(6)}\033[0m {sep} {line}')
+        title = ''
+        sep = ' '
 
 
 def ipt(user: str):
@@ -155,11 +175,11 @@ def ipt(user: str):
             return txt
 
 
-def call_with_retries(payload: bytes, echo: str, timeout: int = 10):
+def call_with_retries(payload: bytes, echo: str, upd: bool = True, timeout: int = 10):
     '''Call server with retries'''
     EchoDict[echo] = None
-    Thread(target=thread_network_send, args=(
-        echo, payload), daemon=True).start()
+    target = thread_network_send_udp if upd else thread_network_send_tcp
+    Thread(target=target, args=(echo, payload), daemon=True).start()
     waiting_screen(echo, timeout)
     result = EchoDict.pop(echo)
     return result
@@ -173,7 +193,7 @@ def test_server_connection():
 
             echo = random_str()
             payload = PayloadHelper.request_meta(echo, True)
-            call_with_retries(payload, echo)
+            call_with_retries(payload, echo, True, 10)
 
             log('Connected!', False)
             break
@@ -184,16 +204,16 @@ def test_server_connection():
 
 def interactive_login() -> str:
     '''Interactive login'''
-    global TOKEN
+    global Token
 
     log('Login', False)
 
     while True:
-        username = ipt('Enter your username:')
+        username = ipt('Enter username:')
 
         echo = random_str()
-        payload = PayloadHelper.request_auth(username, "", True, echo)
-        data = call_with_retries(payload, echo)
+        payload = PayloadHelper.request_auth(username, '', True, echo)
+        data = call_with_retries(payload, echo, True, 10)
 
         code = data['code']
         succ = code == 200
@@ -210,33 +230,33 @@ def interactive_login() -> str:
         if not succ:
             continue
 
-        passwd = ipt('Enter your password:')
+        passwd = ipt('Enter password:')
 
         echo = random_str()
         payload = PayloadHelper.request_auth(username, passwd, True, echo)
-        data = call_with_retries(payload, echo)
+        data = call_with_retries(payload, echo, True, 10)
 
         code = data['code']
         succ = code == 200
         log(data['msg'], not succ)
 
         if succ and 'token' in data:
-            TOKEN = data['token']
+            Token = data['token']
             return username
 
 
 def interactive_register() -> str:
     '''Interactive register'''
-    global TOKEN
+    global Token
 
     log('Register', False)
 
     while True:
-        username = ipt('Enter your username:')
+        username = ipt('Enter username:')
 
         echo = random_str()
-        payload = PayloadHelper.request_auth(username, "", False, echo)
-        data = call_with_retries(payload, echo)
+        payload = PayloadHelper.request_auth(username, '', False, echo)
+        data = call_with_retries(payload, echo, True, 10)
 
         code = data['code']
         succ = code == 200
@@ -245,18 +265,18 @@ def interactive_register() -> str:
         if not succ:
             continue
 
-        passwd = ipt('Enter your password:')
+        passwd = ipt('Enter password:')
 
         echo = random_str()
         payload = PayloadHelper.request_auth(username, passwd, False, echo)
-        data = call_with_retries(payload, echo)
+        data = call_with_retries(payload, echo, True, 10)
 
         code = data['code']
         succ = code == 200
         log(data['msg'], not succ)
 
         if succ and 'token' in data:
-            TOKEN = data['token']
+            Token = data['token']
             break
 
     return username
@@ -265,7 +285,7 @@ def interactive_register() -> str:
 def interactive_commdline(user: str) -> str:
     '''Interactive register'''
 
-    while TOKEN:
+    while Token:
         argv = ipt(user)
 
         args = argv.split(' ')
@@ -274,17 +294,40 @@ def interactive_commdline(user: str) -> str:
             continue
 
         cmd = args[0]
+        argv = ' '.join(args[1:])
 
         echo = random_str()
-        payload = PayloadHelper.request_command(cmd, TOKEN, args, echo)
-        data = call_with_retries(payload, echo)
+
+        if cmd == 'UPD':
+            title = ' '.join(args[1:-1])
+            f_name, f_body = package_file(args[-1])
+            payload = PayloadHelper.request_file(
+                f_name, f_body, title, Token, True, echo)
+            data = call_with_retries(payload, echo, False, 10)
+
+        elif cmd == 'DWN':
+            title = ' '.join(args[1:-1])
+            f_name = args[-1]
+
+            payload = PayloadHelper.request_file(
+                f_name, "", title, Token, False, echo)
+            data = call_with_retries(payload, echo, False, 10)
+
+        else:
+            payload = PayloadHelper.request_command(cmd, Token, argv, echo)
+            data = call_with_retries(payload, echo, True, 10)
 
         code = data['code']
-        succ = code == 200
-        if succ:
-            log(data['data'], False)
+        msg = data.get('data', None) or data.get(
+            'msg', None) or 'Unknown Error'
+        if code == 200:
+            logcmd(msg, False)
+        elif code == 201:
+            log(msg, True)
+            return
+
         else:
-            log(data['msg'], True)
+            logcmd(msg, True)
 
 
 def main():
@@ -294,7 +337,7 @@ def main():
     print()
 
     log('Avilable commands:', False)
-    log(", ".join(CMDs), False)
+    log(', '.join(CMDS), False)
 
     print()
 

@@ -1,6 +1,4 @@
 
-from typing import List
-
 from .exceptions import ForumBaseException
 from .utils import json_serializer
 
@@ -23,10 +21,9 @@ class PayloadHelper:
         return data
 
     @staticmethod
-    def request_command(cmd: str, token: str, args: List[str] = None, echo: str = ''):
+    def request_command(cmd: str, token: str, args: str = None, echo: str = ''):
         '''Command request'''
-        jd = {'cmd': cmd, 'args': args or None,
-              'token': token, 'echo': echo}
+        jd = {'cmd': cmd, 'args': args or '', 'token': token, 'echo': echo}
         data = json_serializer(jd)
         return data
 
@@ -52,5 +49,18 @@ class PayloadHelper:
         data = json_serializer(jd)
         return data
 
+    @staticmethod
+    def request_file(name: str, body: str, title: str, token: str,  upload: bool = True, echo: str = ''):
+        jd = {'cmd': 'UPD' if upload else 'DWN',
+              'title': title,
+              'name': name, 'body': body,
+              'token': token, 'echo': echo}
+        data = json_serializer(jd)
+        return data
 
-PH = PayloadHelper()
+    @staticmethod
+    def response_file(code: int = 200, msg: str = 'OK', name: str = '', body: str = '', echo: str = ''):
+        jd = {'code': code, 'msg': msg, 'name': name,
+              'body': body,  'echo': echo}
+        data = json_serializer(jd)
+        return data

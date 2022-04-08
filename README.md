@@ -2,18 +2,18 @@
 
 ## 指令表
 
-| 指令 | 全名           | 示例                  | 说明         | 回显                            |
-| ---- | -------------- | --------------------- | ------------ | ------------------------------- |
-| CRT  | Create Thread  | CRT 帖子标题          | 创建帖子     |                                 |
-| LST  | List Threads   | LST                   | 列出所有帖子 |                                 |
-| MSG  | Post Message   | MSG 帖子标题 消息     | 发送回复     | messagenumber username: message |
-|EDT|Edit Message|EDT 帖子标题 回帖序号 消息|编辑回复||
-| DLT  | Delete Message | DLT 帖子标题 回帖序号 | 删除回复     |                                 |
-| RDT  | Read Thread    | RDT 帖子标题          | 获取帖子回复 |                                 |
-| UPD  | Upload file    | UPD 帖子标题 文件名   | 上传文件     | Username uploaded filename      |
-| DWN  | Download file  | DWN 帖子标题 文件名   | 下载文件     |                                 |
-| RMV  | Remove Thread  | RMV 帖子标题          | 删除帖子     |                                 |
-| XIT  | Exit           | XIT                   | 退出         |                                 |
+| 指令 | 全名           | 示例                       | 说明         | 回显                            |
+| ---- | -------------- | -------------------------- | ------------ | ------------------------------- |
+| CRT  | Create Thread  | CRT 帖子标题               | 创建帖子     |                                 |
+| LST  | List Threads   | LST                        | 列出所有帖子 |                                 |
+| MSG  | Post Message   | MSG 帖子标题 消息          | 发送回复     | messagenumber username: message |
+| EDT  | Edit Message   | EDT 帖子标题 回帖序号 消息 | 编辑回复     |                                 |
+| DLT  | Delete Message | DLT 帖子标题 回帖序号      | 删除回复     |                                 |
+| RDT  | Read Thread    | RDT 帖子标题               | 获取帖子回复 |                                 |
+| UPD  | Upload file    | UPD 帖子标题 文件名        | 上传文件     | Username uploaded filename      |
+| DWN  | Download file  | DWN 帖子标题 文件名        | 下载文件     |                                 |
+| RMV  | Remove Thread  | RMV 帖子标题               | 删除帖子     |                                 |
+| XIT  | Exit           | XIT                        | 退出         |                                 |
 
 ## 通讯协议
 
@@ -54,7 +54,7 @@
 ```json
 {
   "code": 200,
-  "msg": "Error",
+  "msg": "",
   "error": "",
   "echo": ""
 }
@@ -117,7 +117,7 @@
 ```json
 {
   "cmd": "LST",
-  "args": [],
+  "args": "",
   "token": "",
   "echo": ""
 }
@@ -129,7 +129,34 @@
 {
   "code": "200",
   "msg": "",
-  "data": {},
+  "data": "",
+  "echo": ""
+}
+```
+
+### 文件交换
+
+- 请求
+
+```json
+{
+  "cmd": "UPD",
+  "args": "",
+  "name":"",
+  "body":"",
+  "token":"",
+  "echo":""
+}
+```
+
+- 响应
+
+```json
+{
+  "code": "200",
+  "msg": "",
+  "name":"",
+  "body":"",
   "echo": ""
 }
 ```
@@ -144,12 +171,9 @@
 {"cmd":"LST","args":[],"token":"","echo":""}
 ```
 
-
-
 输出示例
 
 ```txt
 user> LST
 <wait response ...>
 ```
-

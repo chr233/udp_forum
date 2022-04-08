@@ -76,6 +76,51 @@ class PostNotExitsError(PostBaseException):
     ...
 
 
+class MessageNotExitsError(PostBaseException):
+    '''MessageNotExitsError'''
+    ...
+
+
+class FileNotExitsError(PostBaseException):
+    '''FileNotExitsError'''
+    ...
+
+
 class PostTitleDuplicateError(PostBaseException):
     '''PostTitleDuplicateError'''
+    ...
+
+
+class FileNameDuplicateError(PostBaseException):
+    '''FileNameDuplicateError'''
+    ...
+
+
+class FileContentDecodeError(PostBaseException):
+    '''FileContentDecodeError'''
+    ...
+
+
+class FileIOError(PostBaseException):
+    '''FileIOError'''
+    ...
+
+
+class FileNotFoundError(PostBaseException):
+    '''FileNotFoundError'''
+    ...
+
+
+class PermissionDeniedError(PostBaseException):
+    '''PermissionDeniedError'''
+    ...
+
+
+class ArgumentError(PostBaseException):
+    '''ArgumentError'''
+    ...
+
+
+class UnsupportedMethod(ForumBaseException):
+    '''UnsupportedMethod'''
     ...

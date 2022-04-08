@@ -1,11 +1,17 @@
 
 import json
+from base64 import b16encode, b64decode
+from concurrent.futures import thread
 from os import mkdir, path
-from typing import Dict
+from typing import Dict, Tuple
 
-from core.exceptions import PostNotExitsError, PostTitleDuplicateError
+from core.exceptions import (FileContentDecodeError, FileIOError,
+                             FileNameDuplicateError, FileNotExitsError,
+                             MessageNotExitsError, PermissionDeniedError,
+                             PostNotExitsError, PostTitleDuplicateError)
+from core.utils import package_file
 
-from .models import ForumFile, ForumMessage, ForumModelEncoder, ForumPost
+from .models import ForumFile, ForumMessage, ForumModelEncoder, ForumThread
 
 
 class ForumHandler:
@@ -13,8 +19,8 @@ class ForumHandler:
     file_path: str
     data_path: str
 
-    pid_dict: Dict[int, ForumPost] = {}
-    title_dict: Dict[str, ForumPost] = {}
+    pid_dict: Dict[int, ForumThread] = {}
+    title_dict: Dict[str, ForumThread] = {}
 
     current_no = 0
 
@@ -92,7 +98,7 @@ class ForumHandler:
                             except (KeyError, ValueError) as e:
                                 print(e)
 
-                        forum_post = ForumPost(
+                        forum_post = ForumThread(
                             p_id, p_title, p_author,
                             p_next_mid, p_next_fid,
                             messages, files
@@ -121,50 +127,188 @@ class ForumHandler:
         except Exception as e:
             print(e)
 
-    def __fetch_thread(self, title: str = None, pid: int = None):
+    def __fetch_thread(self, title: str = None) -> ForumThread:
         if title and title in self.title_dict:
             return self.title_dict[title]
 
-        if pid and pid in self.pid_dict:
-            return self.pid_dict[pid]
+        try:
+            pid = int(title)
+            if pid and pid in self.pid_dict:
+                return self.pid_dict[pid]
+        except ValueError:
+            pass
 
-        raise PostNotExitsError(404, f'Post {title} not found')
+        raise PostNotExitsError(404, f'Thread {title} not found')
 
-    def create_thread(self, title, user):
+    def __fetch_thread_message(self, title: str, mid: int) -> Tuple[ForumThread, ForumMessage]:
+        thread = self.__fetch_thread(title)
+
+        if mid in thread.messages:
+            return (thread, thread.messages[mid])
+
+        raise MessageNotExitsError(
+            404, f'Message id {mid} in thread {title} not found')
+
+    def __fetch_thread_file(self, title: str, name: int) -> ForumFile:
+        thread = self.__fetch_thread(title)
+
+        for file in thread.files:
+            if file.name == name or file.fid == name:
+                return (thread, file)
+
+        raise FileNotExitsError(
+            404, f'File {name} in thread {title} not found')
+
+    def create_thread(self, title, user) -> ForumThread:
         if title in self.title_dict:
             raise PostTitleDuplicateError(
                 400, f'Thread {title} is already exist')
 
-        no = self.current_no
-        post = ForumPost(no, title, user, {})
+        pid = self.current_no
+        new_post = ForumThread(pid, title, user, 1, 1, {}, {})
 
         self.current_no += 1
-        self.pid_dict[no] = post
-        self.title_dict[title] = post
+        self.pid_dict[pid] = new_post
+        self.title_dict[title] = new_post
 
         self.__save_db()
 
-        return post
+        return f'{str(pid).ljust(2)} | {new_post.title.ljust(12)}'
 
-    def list_threads(self):
-        ...
+    def delete_thread(self, title: str, user: str) -> str:
+        thread = self.__fetch_thread(title)
 
-    def post_message(self, title, user, message):
-        post = self.__fetch_thread(title, None)
+        if user != thread.author:
+            raise PermissionDeniedError(
+                403, 'The thread belongs to another user and cannot be edited')
 
-        ...
+        self.pid_dict.pop(thread.pid, None)
+        self.title_dict.pop(thread.title, None)
 
-    def post_message_no(self, pid, user, message):
-        post = self.__fetch_thread(None, pid)
+        self.__save_db()
 
-    def delete_message(self, title, mid, user):
-        post = self.__fetch_thread(title, None)
+        return f'Thread {title} deleted'
 
-    def delete_message_no(self, pid, mid, user):
-        post = self.__fetch_thread(None, pid)
+    def list_threads(self) -> str:
+        lines = ['ID | Thread Title | Author']
 
-    def read_thread(self, title):
-        post = self.__fetch_thread(title, None)
+        ids = sorted(self.pid_dict.keys())
 
-    def read_thread_no(self, pid):
-        post = self.__fetch_thread(None, pid)
+        for pid in ids:
+            post = self.pid_dict.get(pid, None)
+            if not post:
+                continue
+            lines.append(
+                f'{str(pid).ljust(2)} | {post.title.ljust(12)} | {post.author}')
+
+        return '\n'.join(lines)
+
+    def read_thread(self, title: str) -> str:
+        thread = self.__fetch_thread(title)
+
+        lines = ['ID | Message']
+
+        msgs = thread.messages.values()
+
+        if not msgs:
+            lines.append('There is no message in this thread')
+        else:
+            for msg in msgs:
+                lines.append(
+                    f'{str(msg.mid).ljust(2)} | {msg.author}: {msg.message}')
+
+        files = thread.files.values()
+
+        if files:
+            lines.append('')
+            lines.append('ID | File Name')
+
+            for file in files:
+                lines.append(
+                    f'{str(file.fid).ljust(2)} | {file.uploader}: {file.name}')
+
+        return '\n'.join(lines)
+
+    def post_message(self, title: str, message: str, user: str) -> str:
+        thread = self.__fetch_thread(title)
+
+        mid = thread.next_mid
+        msg = ForumMessage(mid, user, message)
+        thread.messages[mid] = msg
+        thread.next_mid += 1
+
+        self.__save_db()
+
+        return f'Message posted to {title} thread'
+
+    def edit_message(self, title: str, mid: str, message: str, user: str) -> str:
+        thread, msg = self.__fetch_thread_message(title, mid)
+
+        if user != msg.author:
+            raise PermissionDeniedError(
+                403, f'The thread belongs to another user and cannot be edited')
+
+        msg.message = message
+        thread.messages[mid] = msg
+
+        self.__save_db()
+
+        return 'The message has been edited'
+
+    def delete_message(self, title: str, mid: str, user: str) -> str:
+        thread, msg = self.__fetch_thread_message(title, mid)
+
+        if user != msg.author:
+            raise PermissionDeniedError(
+                403, f'The thread belongs to another user and cannot be edited')
+
+        thread.messages.pop(msg.mid, None)
+
+        self.__save_db()
+
+        return 'The message has been deleted'
+
+    def upload_file(self, title: str, file_name: str, content: str, user: str) -> str:
+        thread = self.__fetch_thread(title)
+
+        if file_name in thread.files:
+            raise FileNameDuplicateError(
+                400, f'File {file_name} is already exist')
+
+        try:
+            raw = b64decode(content.encode('utf-8'))
+        except Exception:
+            raise FileContentDecodeError(
+                400, f'File {file_name} content decode error')
+
+        fold_path = path.join(self.data_path, title)
+        if not path.exists(fold_path):
+            mkdir(fold_path)
+
+        file_path = path.join(fold_path, file_name)
+        try:
+            with open(file_path, 'wb') as f:
+                f.write(raw)
+        except Exception:
+            raise FileIOError(500, f'Can not write file {file_name}')
+
+        fid = thread.next_fid
+        file = ForumFile(fid, user, file_name)
+        thread.files[file_name] = file
+        thread.next_fid += 1
+
+        self.__save_db()
+
+        return f'File {file_name} uploaded to {title} thread'
+
+    def download_file(self, title: str, file_name: str) -> str:
+        file = self.__fetch_thread_file(title, file_name)
+
+        file_path = path.join(self.data_path, title, file.name)
+
+        try:
+            name, body = package_file(file_path)
+        except Exception:
+            raise FileIOError(404, f'Can not read file {file_name}')
+
+        return body

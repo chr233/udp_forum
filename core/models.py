@@ -25,7 +25,7 @@ class ForumFile:
         self.name = name
 
 
-class ForumPost:
+class ForumThread:
     pid: int
     title: str
     author: str
@@ -47,13 +47,14 @@ class ForumPost:
 class ForumModelEncoder(JSONEncoder):
 
     def default(self, obj):
-        if isinstance(obj, ForumPost):
+        if isinstance(obj, ForumThread):
             return {
                 'title': obj.title,
                 'author': obj.author,
                 'next_mid': obj.next_mid,
                 'next_fid': obj.next_fid,
                 'messages': obj.messages,
+                'files': obj.files
             }
         elif isinstance(obj, ForumMessage):
             return {
