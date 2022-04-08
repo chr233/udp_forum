@@ -8,7 +8,7 @@ from base64 import b64decode, b64encode
 from socket import socket as Socket
 from threading import Thread
 from typing import Dict
-from core.exceptions import ForumBaseException
+from core.exceptions import FileTooLargeError, ForumBaseException
 
 from core.payload_helper import PayloadHelper
 from core.utils import json_deserializer, random_str, package_file
@@ -54,7 +54,7 @@ def thread_network_send_tcp(echo, payload):
     '''Thread sending data via TCP'''
     STCP = Socket(socket.AF_INET, socket.SOCK_STREAM)
     STCP.setblocking(True)
-    
+
     for _ in range(RETRIES + 1):
         try:
             STCP.connect(ServerAddr)
@@ -300,7 +300,18 @@ def interactive_commdline(user: str) -> str:
 
         if cmd == 'UPD':
             title = ' '.join(args[1:-1])
-            f_name, f_body = package_file(args[-1])
+            try:
+                f_name, f_body = package_file(args[-1])
+            except FileTooLargeError:
+                logcmd(f'File {f_name} too large!', True)
+                continue
+            except IOError:
+                logcmd(f'File {f_name} not found!', True)
+                continue
+            except Exception as e:
+                logcmd(f'Unknown error: {e}', True)
+                continue
+
             payload = PayloadHelper.request_file(
                 f_name, f_body, title, Token, True, echo)
             data = call_with_retries(payload, echo, False, 10)
@@ -313,6 +324,17 @@ def interactive_commdline(user: str) -> str:
                 f_name, "", title, Token, False, echo)
             data = call_with_retries(payload, echo, False, 10)
 
+            try:
+                with open(f_name, 'wb') as f:
+                    body = data['body']
+                    raw = b64decode(body.encode('utf-8'))
+                    f.write(raw)
+            except IOError:
+                logcmd(f'Download file {f_name} error!', True)
+                continue
+            except Exception as e:
+                logcmd(f'Unknown error: {e}', True)
+                continue
         else:
             payload = PayloadHelper.request_command(cmd, Token, argv, echo)
             data = call_with_retries(payload, echo, True, 10)

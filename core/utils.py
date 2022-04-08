@@ -7,7 +7,7 @@ from time import time
 from typing import Dict, Tuple
 from uuid import uuid1
 
-from .exceptions import (ForumBaseException, PayloadInvlidError)
+from .exceptions import (FileTooLargeError, ForumBaseException, PayloadInvlidError)
 
 
 def random_str():
@@ -23,6 +23,8 @@ def package_file(file_path: str) -> Tuple[str, str]:
 
     with open(file_path, 'rb') as f:
         data = f.read()
+        if len(data) >8000:
+            raise FileTooLargeError(413, 'File too large')
 
     body = b64encode(data).decode('utf-8')
     return (name, body)

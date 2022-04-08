@@ -76,9 +76,7 @@ class UDPHandler():
                             raise ArgumentError(400, CMD_USAGE[cmd])
 
                         title = ' '.join(args)
-                        new_post = self.forum.create_thread(title, user)
-
-                        result = f'{new_post.pid} {new_post.title}'
+                        result = self.forum.create_thread(title, user)
 
                         response = PayloadHelper.response_command(
                             200, result, msg, echo=echo)
@@ -144,13 +142,13 @@ class UDPHandler():
                     elif cmd == 'UPD':  # Upload file, UPD <title> <filename>
                         err = UnsupportedMethod(
                             400, 'UDP command must send using TCP')
-                        
-                        response = PayloadHelper.response_error(err, echo=echo)                        
+
+                        response = PayloadHelper.response_error(err, echo=echo)
                     elif cmd == 'DWN':  # Download file, DWN <title> <filename>
                         err = UnsupportedMethod(
                             400, 'UDP command must send using TCP')
-                        
-                        response = PayloadHelper.response_error(err, echo=echo)                        
+
+                        response = PayloadHelper.response_error(err, echo=echo)
                     elif cmd == 'RMV':  # Remove Thread, RMV <title>
                         if len(args) < 1:
                             raise ArgumentError(400, CMD_USAGE[cmd])
@@ -192,7 +190,8 @@ class UDPHandler():
                             201, result, msg, echo=echo)
 
                     else:
-                        raise UnrecognizedCmdError(400, f'Unrecognized cmd {cmd}')
+                        raise UnrecognizedCmdError(
+                            400, f'Unrecognized cmd {cmd}')
 
                 elif 'user' in payload and 'passwd' in payload:
                     # login/register

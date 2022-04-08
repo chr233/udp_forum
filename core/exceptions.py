@@ -106,6 +106,11 @@ class FileIOError(PostBaseException):
     ...
 
 
+class FileTooLargeError(PostBaseException):
+    '''FileTooLargeError'''
+    ...
+
+
 class FileNotFoundError(PostBaseException):
     '''FileNotFoundError'''
     ...

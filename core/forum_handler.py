@@ -1,7 +1,6 @@
 
 import json
-from base64 import b16encode, b64decode
-from concurrent.futures import thread
+from base64 import b64decode
 from os import mkdir, path
 from typing import Dict, Tuple
 
@@ -149,12 +148,12 @@ class ForumHandler:
         raise MessageNotExitsError(
             404, f'Message id {mid} in thread {title} not found')
 
-    def __fetch_thread_file(self, title: str, name: int) -> ForumFile:
+    def __fetch_thread_file(self, title: str, name: str) -> ForumFile:
         thread = self.__fetch_thread(title)
 
-        for file in thread.files:
+        for file in thread.files.values():
             if file.name == name or file.fid == name:
-                return (thread, file)
+                return file
 
         raise FileNotExitsError(
             404, f'File {name} in thread {title} not found')
@@ -194,12 +193,15 @@ class ForumHandler:
 
         ids = sorted(self.pid_dict.keys())
 
-        for pid in ids:
-            post = self.pid_dict.get(pid, None)
-            if not post:
-                continue
-            lines.append(
-                f'{str(pid).ljust(2)} | {post.title.ljust(12)} | {post.author}')
+        if not ids:
+            lines.append('There is no message in this thread')
+        else:
+            for pid in ids:
+                post = self.pid_dict.get(pid, None)
+                if not post:
+                    continue
+                lines.append(
+                    f'{str(pid).ljust(2)} | {post.title.ljust(12)} | {post.author}')
 
         return '\n'.join(lines)
 
@@ -294,7 +296,7 @@ class ForumHandler:
 
         fid = thread.next_fid
         file = ForumFile(fid, user, file_name)
-        thread.files[file_name] = file
+        thread.files[fid] = file
         thread.next_fid += 1
 
         self.__save_db()
