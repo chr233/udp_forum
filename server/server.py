@@ -65,6 +65,7 @@ def main(host, port):
 
             rlist, wlist, elist = select.select(inputs, outputs, inputs, 1)
             for s in rlist:
+                # any socket is ready for reading
                 if s == tcp_socket:
                     # TCP incoming connection
                     conn, addr = s.accept()
@@ -100,6 +101,7 @@ def main(host, port):
                         msg_queue.pop(s, None)
 
             for s in wlist:
+                # any socket is ready for writing
                 try:
                     payload = msg_queue[s].get_nowait()
                     s.send(payload)
@@ -109,6 +111,7 @@ def main(host, port):
                     pass
 
             for s in elist:
+                # any socket raises error
                 if s != udp_socket:
 
                     log('TCP connection error', None, True)

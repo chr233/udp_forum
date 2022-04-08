@@ -161,7 +161,7 @@ def logcmd(msg: str, error: bool = False):
     title = 'Result' if not error else 'Error'
     sep = '<'
     for line in msg.split('\n'):
-        print(f'\033[{color}m$ {title.center(6)}\033[0m {sep} {line}')
+        print(f'\033[{color}m$ {title.center(6)} \033[0m{sep} {line}')
         title = ''
         sep = ' '
 
@@ -169,7 +169,7 @@ def logcmd(msg: str, error: bool = False):
 def ipt(user: str):
     '''Input text'''
     while True:
-        txt = input(f'\033[32m$ {user.center(6) }\033[0m> ')
+        txt = input(f'\033[32m$ {user.center(6)} \033[0m> ')
         if txt:
             return txt
 
@@ -303,13 +303,14 @@ def interactive_commdline(user: str) -> str:
 
         if cmd == 'UPD':
             title = ' '.join(args[1:-1])
+            name = args[-1]
             try:
-                f_name, f_body = package_file(args[-1])
+                f_name, f_body = package_file(name)
             except FileTooLargeError:
                 logcmd(f'File {f_name} too large!', True)
                 continue
             except IOError:
-                logcmd(f'File {f_name} not found!', True)
+                logcmd(f'File {name} not found!', True)
                 continue
             except Exception as e:
                 logcmd(f'Unknown error: {e}', True)

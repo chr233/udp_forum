@@ -141,7 +141,7 @@
 ```json
 {
   "cmd": "UPD",
-  "args": "",
+  "title": "",
   "name":"",
   "body":"",
   "token":"",
@@ -169,6 +169,8 @@
 {"cmd":"LOG","user":"","passwd":"","echo":""}
 
 {"cmd":"LST","args":[],"token":"","echo":""}
+
+'27bb9db1b70311ecb03b80c5f207068c'
 ```
 
 输出示例
