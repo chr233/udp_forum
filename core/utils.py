@@ -38,7 +38,7 @@ def log(msg: str, addr: Tuple[str, int] = None, error: bool = False):
         title = 'Server'
         color = 34 if not error else 35
 
-    print(f'[\033[{color}m{title}\033[0m] {msg}')
+    print(f'[\033[{color}m{title.center(8)}\033[0m] {msg}')
 
 
 def json_serializer(obj: dict) -> bytes:

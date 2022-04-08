@@ -153,7 +153,7 @@ def log(msg: str,  error: bool = False):
     '''Logging'''
     title = 'Client'
     color = 32 if not error else 31
-    print(f'\r[\033[{color}m{title}\033[0m] {msg}')
+    print(f'\r[\033[{color}m{title.center(8)}\033[0m] {msg}')
 
 
 def logcmd(msg: str, error: bool = False):

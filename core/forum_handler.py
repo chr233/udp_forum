@@ -172,7 +172,7 @@ class ForumHandler:
 
         self.__save_db()
 
-        return f'{str(pid).ljust(2)} | {new_post.title.ljust(12)}'
+        return f'Thread {title} created'
 
     def delete_thread(self, title: str, user: str) -> str:
         thread = self.__fetch_thread(title)
@@ -186,7 +186,7 @@ class ForumHandler:
 
         self.__save_db()
 
-        return f'Thread {title} deleted'
+        return f'Thread {thread.title} deleted'
 
     def list_threads(self) -> str:
         lines = ['ID | Thread Title | Author']
@@ -241,7 +241,7 @@ class ForumHandler:
 
         self.__save_db()
 
-        return f'Message posted to {title} thread'
+        return f'Message posted to {thread.title} thread'
 
     def edit_message(self, title: str, mid: str, message: str, user: str) -> str:
         thread, msg = self.__fetch_thread_message(title, mid)

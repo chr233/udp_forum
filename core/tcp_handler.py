@@ -15,19 +15,18 @@ from .utils import json_deserializer, log
 class TCPHandler():
     auth: Authenticator
     forum: ForumHandler
-    
 
     def __init__(self, auth: Authenticator, forum: ForumHandler):
         self.auth = auth
         self.forum = forum
 
-    def handle_message(self, raw: bytes,addr:Tuple[str,int]):
+    def handle_message(self, raw: bytes, addr: Tuple[str, int]):
         try:
             response = None
             # addr = sock.getpeername()
             payload = json_deserializer(raw)
 
-            log(f'T IN  <-- {payload}', None, False)
+            # log(f'T IN  <-- {payload}', None, False)
 
             echo = payload['echo']
 
@@ -48,6 +47,8 @@ class TCPHandler():
                     response = PayloadHelper.response_file(
                         200, result, '', '', echo)
 
+                    log(f'{user} uploaded file {name} to {title} thread', addr, False)
+
                 elif cmd == 'DWN':
                     body = self.forum.download_file(title, name)
                     result = f'Successfully download file {name}'
@@ -55,6 +56,8 @@ class TCPHandler():
                     response = PayloadHelper.response_file(
                         200, result, name, body, echo)
 
+                    log(f'{user} downloaded file {name} from {title} thread', addr, False)
+                    
                 else:
                     raise UnrecognizedCmdError(400, f'Unrecognized cmd {cmd}')
 
@@ -85,7 +88,7 @@ class TCPHandler():
                 err = ForumBaseException(500, 'Internal Server Error')
                 response = PayloadHelper.response_error(err, echo)
 
-            log(f'T OUT --> {response.decode("utf-8")}', addr, False)
+            # log(f'T OUT --> {response.decode("utf-8")}', addr, False)
             return response
 
     @staticmethod

@@ -193,6 +193,11 @@ class UDPHandler():
                         raise UnrecognizedCmdError(
                             400, f'Unrecognized cmd {cmd}')
 
+                    if cmd != 'HEART':
+                        log(f'{user} issued {cmd} command', addr, False)
+                        if result.find('\n')==-1:
+                            log(result, addr, False)
+
                 elif 'user' in payload and 'passwd' in payload:
                     # login/register
                     user = payload['user']

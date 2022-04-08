@@ -72,7 +72,7 @@ def main(host, port):
 
                     inputs.append(conn)
                     msg_queue[conn] = Queue()
-                    log('TCP connection established', addr, False)
+                    # log('TCP connection established', addr, False)
 
                 elif s == udp_socket:
                     # UDP message
@@ -84,14 +84,14 @@ def main(host, port):
                     addr = s.getpeername()
                     if data:
                         # TCP message
-                        response = tcp_handler.handle_message(data,addr)
+                        response = tcp_handler.handle_message(data, addr)
                         msg_queue[s].put(response)
                         if s not in outputs:
                             outputs.append(s)
 
                     else:
                         # TCP close
-                        log('TCP connection closed', addr, True)
+                        # log('TCP connection closed', addr, True)
 
                         if s in outputs:
                             outputs.remove(s)
@@ -111,7 +111,7 @@ def main(host, port):
             for s in elist:
                 if s != udp_socket:
 
-                    log(f'TCP connection error {s}', None, True)
+                    log('TCP connection error', None, True)
 
                     inputs.remove(s)
                     if s in outputs:
