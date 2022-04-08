@@ -3,13 +3,12 @@ import select
 import socket
 import sys
 import time
-from os import path
-from base64 import b64decode, b64encode
+from base64 import b64decode
 from socket import socket as Socket
 from threading import Thread
 from typing import Dict
-from core.exceptions import FileTooLargeError, ForumBaseException
 
+from core.exceptions import FileTooLargeError, ForumBaseException
 from core.payload_helper import PayloadHelper
 from core.utils import json_deserializer, random_str, package_file
 
@@ -153,7 +152,7 @@ def log(msg: str,  error: bool = False):
     '''Logging'''
     title = 'Client'
     color = 32 if not error else 31
-    print(f'\r[\033[{color}m{title.center(8)}\033[0m] {msg}')
+    print(f'\r[\033[{color}m {title} \033[0m] {msg}')
 
 
 def logcmd(msg: str, error: bool = False):
@@ -170,7 +169,7 @@ def logcmd(msg: str, error: bool = False):
 def ipt(user: str):
     '''Input text'''
     while True:
-        txt = input(f'\033[32m$ {user.center(6)}\033[0m > ')
+        txt = input(f'\033[32m$ {user.center(6) }\033[0m> ')
         if txt:
             return txt
 
@@ -205,6 +204,8 @@ def test_server_connection():
 def interactive_login() -> str:
     '''Interactive login'''
     global Token
+
+    print()
 
     log('Login', False)
 
@@ -248,6 +249,8 @@ def interactive_login() -> str:
 def interactive_register() -> str:
     '''Interactive register'''
     global Token
+
+    print()
 
     log('Register', False)
 
@@ -354,6 +357,7 @@ def interactive_commdline(user: str) -> str:
 
 def main():
     test_server_connection()
+    
     user = interactive_login()
 
     print()
