@@ -8,7 +8,7 @@ from core.exceptions import (FileContentDecodeError, FileIOError,
                              FileNameDuplicateError, FileNotExitsError,
                              MessageNotExitsError, PermissionDeniedError,
                              PostNotExitsError, PostTitleDuplicateError)
-from core.utils import package_file
+from core.utils import package_file,remove_dir_recursive
 
 from .models import ForumFile, ForumMessage, ForumModelEncoder, ForumThread
 
@@ -184,7 +184,24 @@ class ForumHandler:
         self.pid_dict.pop(thread.pid, None)
         self.title_dict.pop(thread.title, None)
 
+        next_fid = 1
+        pid_dict = {}
+        title_dict = {}
+        for i, th in enumerate(self.pid_dict.values(), 1):
+            th.pid = i
+            pid_dict[i] = th
+            title_dict[title] = th
+            next_fid += 1
+
+        self.pid_dict = pid_dict
+        self.title_dict = title_dict
+        self.current_no = next_fid
+
         self.__save_db()
+        
+        fold_path = path.join(self.data_path, title)
+        if path.exists(fold_path):
+            remove_dir_recursive(fold_path)
 
         return f'Thread {thread.title} deleted'
 
@@ -266,6 +283,16 @@ class ForumHandler:
 
         thread.messages.pop(msg.mid, None)
 
+        next_mid = 1
+        messages = {}
+        for i, msg in enumerate(thread.messages.values(), 1):
+            msg.mid = i
+            messages[i] = msg
+            next_mid += 1
+
+        thread.messages = messages
+        thread.next_mid = next_mid
+
         self.__save_db()
 
         return 'The message has been deleted'
@@ -273,9 +300,10 @@ class ForumHandler:
     def upload_file(self, title: str, file_name: str, content: str, user: str) -> str:
         thread = self.__fetch_thread(title)
 
-        if file_name in thread.files:
-            raise FileNameDuplicateError(
-                400, f'File {file_name} is already exist')
+        for file in thread.files.values():
+            if file_name == file.name:
+                raise FileNameDuplicateError(
+                    400, f'File {file_name} is already exist')
 
         try:
             raw = b64decode(content.encode('utf-8'))

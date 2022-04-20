@@ -1,4 +1,5 @@
 
+from distutils.log import Log
 import select
 import socket
 import sys
@@ -221,7 +222,6 @@ def interactive_login() -> str:
         log(data['msg'], not succ)
 
         if data.get('error', None) == 'UserNotExistsError':
-            print()
             log('Do you want to register?', False)
             choice = ipt('Y: regiser, [N]: login')
 
@@ -289,6 +289,8 @@ def interactive_commdline(user: str) -> str:
     '''Interactive register'''
 
     while Token:
+        echo_help()
+
         argv = ipt(user)
 
         args = argv.split(' ')
@@ -328,17 +330,6 @@ def interactive_commdline(user: str) -> str:
                 f_name, "", title, Token, False, echo)
             data = call_with_retries(payload, echo, False, 10)
 
-            try:
-                with open(f_name, 'wb') as f:
-                    body = data['body']
-                    raw = b64decode(body.encode('utf-8'))
-                    f.write(raw)
-            except IOError:
-                logcmd(f'Download file {f_name} error!', True)
-                continue
-            except Exception as e:
-                logcmd(f'Unknown error: {e}', True)
-                continue
         else:
             payload = PayloadHelper.request_command(cmd, Token, argv, echo)
             data = call_with_retries(payload, echo, True, 10)
@@ -347,7 +338,19 @@ def interactive_commdline(user: str) -> str:
         msg = data.get('data', None) or data.get(
             'msg', None) or 'Unknown Error'
         if code == 200:
-            logcmd(msg, False)
+            if 'body' not in data:
+                logcmd(msg, False)
+            else:
+                try:
+                    body = data['body']
+                    raw = b64decode(body.encode('utf-8'))
+                    with open(f_name, 'wb') as f:
+                        f.write(raw)
+                except IOError:
+                    logcmd(f'Download file {f_name} error!', True)
+                except Exception as e:
+                    logcmd(f'Unknown error: {e}', True)
+                
         elif code == 201:
             log(msg, True)
             return
@@ -356,17 +359,17 @@ def interactive_commdline(user: str) -> str:
             logcmd(msg, True)
 
 
-def main():
-    test_server_connection()
-    
-    user = interactive_login()
-
+def echo_help():
     print()
-
     log('Avilable commands:', False)
     log(', '.join(CMDS), False)
-
     print()
+
+
+def main():
+    test_server_connection()
+
+    user = interactive_login()
 
     interactive_commdline(user)
 

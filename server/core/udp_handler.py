@@ -82,6 +82,9 @@ class UDPHandler():
                             200, result, msg, echo=echo)
 
                     elif cmd == 'LST':  # List Threads, LST
+                        if len(args) != 0:
+                            raise ArgumentError(400, CMD_USAGE[cmd])
+                        
                         result = self.forum.list_threads()
 
                         response = PayloadHelper.response_command(
@@ -178,6 +181,9 @@ class UDPHandler():
                             200, result, msg, echo=echo)
 
                     elif cmd == 'XIT':  # Exit
+                        if len(args) != 0:
+                            raise ArgumentError(400, CMD_USAGE[cmd])
+                        
                         self.auth.logout(payload['token'])
                         log(f'User {user} successful logout!', addr, False)
 

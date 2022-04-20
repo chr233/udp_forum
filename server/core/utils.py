@@ -2,12 +2,13 @@
 import json
 from base64 import b64encode
 from json import JSONDecodeError
-from os import path
+from os import path, walk, remove, rmdir
 from time import time
 from typing import Dict, Tuple
 from uuid import uuid1
 
-from .exceptions import (FileTooLargeError, ForumBaseException, PayloadInvlidError)
+from .exceptions import (
+    FileTooLargeError, ForumBaseException, PayloadInvlidError)
 
 
 def random_str():
@@ -23,7 +24,7 @@ def package_file(file_path: str) -> Tuple[str, str]:
 
     with open(file_path, 'rb') as f:
         data = f.read()
-        if len(data) >8000:
+        if len(data) > 8000:
             raise FileTooLargeError(413, 'File too large')
 
     body = b64encode(data).decode('utf-8')
@@ -68,3 +69,12 @@ def json_deserializer(data: bytes) -> Dict[str, str]:
             raise e
         else:
             raise PayloadInvlidError(422, 'Payload parse error')
+
+
+def remove_dir_recursive(root_path: str):
+    for root, dirs, files in walk(root_path, topdown=False):
+        for name in files:
+            remove(path.join(root, name))
+        for name in dirs:
+            rmdir(path.join(root, name))
+    rmdir(root_path)
