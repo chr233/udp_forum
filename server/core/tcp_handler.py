@@ -46,7 +46,8 @@ class TCPHandler():
 
                     response = PayloadHelper.response_file(
                         200, result, '', '', echo)
-
+                    
+                    log(f'{user} issued {cmd} command', addr, False)
                     log(f'{user} uploaded file {name} to {title} thread', addr, False)
 
                 elif cmd == 'DWN':
@@ -55,7 +56,8 @@ class TCPHandler():
 
                     response = PayloadHelper.response_file(
                         200, result, name, body, echo)
-
+                    
+                    log(f'{user} issued {cmd} command', addr, False)
                     log(f'{user} downloaded file {name} from {title} thread', addr, False)
                     
                 else:
