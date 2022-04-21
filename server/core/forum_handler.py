@@ -211,7 +211,7 @@ class ForumHandler:
         ids = sorted(self.pid_dict.keys())
 
         if not ids:
-            lines.append('There is no message in this thread')
+            lines.append('There is no thread in this thread')
         else:
             for pid in ids:
                 post = self.pid_dict.get(pid, None)

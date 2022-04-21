@@ -338,19 +338,19 @@ def interactive_commdline(user: str) -> str:
         msg = data.get('data', None) or data.get(
             'msg', None) or 'Unknown Error'
         if code == 200:
-            if 'body' not in data:
-                logcmd(msg, False)
-            else:
+            if cmd=='DWN':
                 try:
                     body = data['body']
                     raw = b64decode(body.encode('utf-8'))
                     with open(f_name, 'wb') as f:
                         f.write(raw)
+                    logcmd(msg, False)    
                 except IOError:
                     logcmd(f'Download file {f_name} error!', True)
                 except Exception as e:
                     logcmd(f'Unknown error: {e}', True)
-                
+            else:
+                logcmd(msg, False)
         elif code == 201:
             log(msg, True)
             return
