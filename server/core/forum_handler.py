@@ -190,7 +190,7 @@ class ForumHandler:
         for i, th in enumerate(self.pid_dict.values(), 1):
             th.pid = i
             pid_dict[i] = th
-            title_dict[title] = th
+            title_dict[th.title] = th
             next_fid += 1
 
         self.pid_dict = pid_dict
@@ -211,7 +211,7 @@ class ForumHandler:
         ids = sorted(self.pid_dict.keys())
 
         if not ids:
-            lines.append('There is no thread in this thread')
+            lines.append('There is no thread')
         else:
             for pid in ids:
                 post = self.pid_dict.get(pid, None)

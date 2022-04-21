@@ -227,6 +227,9 @@ def interactive_login() -> str:
 
             if choice.upper() == 'Y':
                 return interactive_register()
+            else:
+                print()
+                log('Login', False)
 
         if not succ:
             continue
